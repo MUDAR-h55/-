@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>نظام تسعيرة التوصيل</title>
+<style>
+  :root {
+    --bg: #0f1724;
+    --card: #0b1220;
+    --accent: #ff8a00;
+    --muted: #94a3b8;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --glass: rgba(255, 255, 255, 0.03);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: linear-gradient(180deg, var(--bg), #071024);
+    color: #e6eef8;
+    font-size: 15px;
+  }
+  .app {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 15px;
+  }
+  h1, h3 {
+    margin: 0 0 10px 0;
+  }
+  label {
+    display: block;
+    margin: 8px 0 4px 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  input[type=text], input[type=number], select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: var(--glass);
+    color: #eee;
+    font-size: 15px;
+  }
+  select {
+    cursor: pointer;
+  }
+  button {
+    background: var(--accent);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 10px;
+    color: #041028;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: transform 0.1s ease;
+  }
+  button:active {
+    transform: scale(0.95);
+  }
+  button.link-like {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(255,255,255,0.03);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-left: 8px;
+  }
+  button.link-like:hover {
+    background: var(--accent);
+    color: #041028;
+  }
+  .muted {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .small {
+    font-size: 12px;
+  }
+  .hidden {
+    display: none;
+  }
+  .entry {
+    display: flex;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  th, td {
+    padding: 8px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    font-size: 13px;
+    text-align: right;
+    vertical-align: middle;
+  }
+  th {
+    background: rgba(255,255,255,0.05);
+  }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .btn-success {
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  input.edit-input {
+    padding: 6px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: #eee;
+    width: 100%;
+  }
+  input.edit-input:focus {
+    outline: none;
+    background: rgba(255,255,255,0.2);
+  }
+  #invoiceCanvas {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    z-index: 10000;
+    display: none;
+  }
+  @media (max-width: 480px) {
+    .app {
+      padding: 12px;
+    }
+  }
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff8a00">
+
+</head>
+<body>
+<div class="app" id="mainApp">
+  <header>
+    <h1>نظام تسعيرة التوصيل</h1>
+    <button id="openStats">الإحصائيات</button>
+  </header>
+
+  <section id="mainForm">
+    <label>اسم سائق الفتى (يملأ تلقائياً)</label>
+    <input id="driverName" type="text" placeholder="اسم السائق" />
+
+    <label>اسم الزبون</label>
+    <input id="customerName" list="customersDatalist" type="text" placeholder="اختر أو اكتب اسم الزبون" />
+    <datalist id="customersDatalist"></datalist>
+
+    <label>الوجهة</label>
+    <select id="destination"></select>
+
+    <div id="otherPlaceRow" class="hidden">
+      <label>اكتب اسم المكان (عند اختيار "أخرى")</label>
+      <input id="otherPlace" type="text" placeholder="اسم المكان" />
+    </div>
+
+    <label>المبلغ (ليرة)</label>
+    <input id="amount" type="number" min="0" step="0.01" />
+
+    <label>تاريخ ووقت الطلعة</label>
+    <input id="datetime" type="text" readonly />
+
+    <div style="margin-top: 12px;">
+      <button id="saveBtn">سجل الطلعة</button>
+      <button id="clearBtn" class="link-like">تفريغ البيانات</button>
+      <button id="exportDataBtn" class="link-like">تصدير البيانات</button>
+      <button id="importDataBtn" class="link-like">استيراد بيانات</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none" />
+    </div>
+
+    <div class="muted small" style="margin-top: 8px;">
+      كل 5 طلعات لكل زبون تُضاف ضريبة 50 ليرة تلقائياً في الإحصائيات.
+    </div>
+
+    <section id="recent" style="margin-top: 15px;"></section>
+  </section>
+</div>
+
+<div class="app hidden" id="statsPage" style="min-height: 100vh; background: linear-gradient(180deg, #041226, #02141f); padding-bottom: 40px;">
+  <header>
+    <h1>الإحصائيات والتقارير</h1>
+    <button id="backBtn" class="link-like">العودة</button>
+  </header>
+
+  <section>
+    <div style="display:flex; justify-content: space-between; flex-wrap: wrap;">
+      <div style="flex:1; min-width:160px;">
+        <div class="muted">إجمالي الطلعات: <strong id="totalTrips">0</strong></div>
+        <div class="muted">إجمالي المبالغ: <strong id="totalAmount">0</strong> ليرة</div>
+        <div class="muted">إجمالي الضرائب المحصلة: <strong id="totalTax">0</strong> ليرة</div>
+      </div>
+      <div style="flex:1; min-width:160px; text-align:center; margin-top:8px;">
+        <button id="printStats">طباعة</button>
+      </div>
+    </div>
+
+    <h3>التفصيل حسب الزبون</h3>
+    <div id="customersStats"></div>
+
+    <h3>قائمة الطلعات</h3>
+    <table id="tripsTable" style="width: 100%;">
+      <thead>
+        <tr><th>التاريخ</th><th>الزبون</th><th>الوجهة</th><th>المبلغ</th><th>اسم السائق</th><th>الساعة</th><th>الإجراءات</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</div>
+
+<!-- عنصر لحفظ صورة الفاتورة -->
+<div id="invoiceCanvas"></div>
+
+<!-- إضافة مكتبة html2canvas لتحويل DIV إلى صورة PNG -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+(function(){
+  // إعداد الأصوات
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playClickSound(){
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    osc.connect(gainNode).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+  const DESTINATIONS = [
+    {label:'طلعة بحيرة عنتاب', price:50},
+    {label:'طلعة المعبر 🏛️', price:35},
+    {label:'طلعة حديقة الحاجز', price:35},
+    {label:'طلعة جبل ⛰️', price:30},
+    {label:'طلعة مشفى 🚨', price:30},
+    {label:'طلعة حديقة النت أو حديقة الفستق', price:30},
+    {label:'طلعة دوار ال112', price:25},
+    {label:'طلعة أكرم جاتين', price:25},
+    {label:'طلعة مسبح الجامعة', price:25},
+    {label:'طلعة مسبح غراتوس', price:20},
+    {label:'فتحة الباب', price:20},
+    {label:'أخرى', price:0}
+  ];
+  const TAX_PER_5 = 50;
+  const KEY_RECORDS = 'delivery_records_v2';
+  const KEY_CUSTOMERS = 'delivery_customers_v2';
+
+  // DOM elements
+  const driverName = document.getElementById('driverName');
+  const customerName = document.getElementById('customerName');
+  const customersDatalist = document.getElementById('customersDatalist');
+  const destination = document.getElementById('destination');
+  const otherPlaceRow = document.getElementById('otherPlaceRow');
+  const otherPlace = document.getElementById('otherPlace');
+  const amount = document.getElementById('amount');
+  const datetime = document.getElementById('datetime');
+  const saveBtn = document.getElementById('saveBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const recentSection = document.getElementById('recent');
+
+  const openStats = document.getElementById('openStats');
+  const statsPage = document.getElementById('statsPage');
+  const mainForm = document.getElementById('mainForm');
+  const backBtn = document.getElementById('backBtn');
+  const printStats = document.getElementById('printStats');
+
+  const totalTripsEl = document.getElementById('totalTrips');
+  const totalAmountEl = document.getElementById('totalAmount');
+  const totalTaxEl = document.getElementById('totalTax');
+  const customersStats = document.getElementById('customersStats');
+  const tripsTableBody = document.querySelector('#tripsTable tbody');
+
+  const exportDataBtn = document.getElementById('exportDataBtn');
+  const importDataBtn = document.getElementById('importDataBtn');
+  const importFileInput = document.getElementById('importFileInput');
+
+  const invoiceCanvas = document.getElementById('invoiceCanvas');
+
+  // Helpers
+  function getRecords(){
+    try { return JSON.parse(localStorage.getItem(KEY_RECORDS) || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveRecords(data){ localStorage.setItem(KEY_RECORDS, JSON.stringify(data)); }
+
+  function getCustomers(){
+    try { return JSON.parse(localStorage.getItem(KEY_CUSTOMERS) || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveCustomers(data){ localStorage.setItem(KEY_CUSTOMERS, JSON.stringify(data)); }
+
+  function refreshCustomersDatalist(){
+    const list = getCustomers();
+    customersDatalist.innerHTML = '';
+    list.forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c;
+      customersDatalist.appendChild(opt);
+    });
+  }
+
+  function setNowDatetime(){
+    // الوقت والساعة بتنسيق ISO لتسهيل التحرير لاحقاً
+    datetime.value = new Date().toLocaleString('ar-EG-u-nu-latn');
+  }
+
+  function populateDestinations(){
+    destination.innerHTML = '';
+    DESTINATIONS.forEach(d=>{
+      const opt = document.createElement('option');
+      opt.value = d.label;
+      opt.dataset.price = d.price;
+      opt.textContent = `${d.label} — ${d.price} ليرة`;
+      destination.appendChild(opt);
+    });
+  }
+
+  function onDestinationChange(){
+    if(destination.value === 'أخرى'){
+      otherPlaceRow.classList.remove('hidden');
+      amount.value = '';
+      amount.placeholder = 'أدخل المبلغ يدوياً';
+    } else {
+      otherPlaceRow.classList.add('hidden');
+      otherPlace.value = '';
+      const sel = [...destination.options].find(o => o.value === destination.value);
+      amount.value = sel ? sel.dataset.price : '';
+    }
+  }
+
+  function renderRecent(){
+    const recs = getRecords();
+    if(recs.length === 0){
+      recentSection.innerHTML = '<div class="muted small">لا توجد طلعات مسجلة بعد.</div>';
+      return;
+    }
+    let html = '<h3>آخر الطلعات</h3>';
+    const slice = recs.slice(0, 8);
+    slice.forEach(r=>{
+      const dt = new Date(r.datetime).toLocaleString('ar-EG-u-nu-latn');
+      html += `
+        <div class="entry">
+          <div><strong>${r.customer}</strong><br><small class="muted">${dt}</small></div>
+          <div style="text-align:left;">
+            <div><strong>${r.amount.toFixed(2)} ليرة</strong></div>
+            <div class="muted small">${r.destination}</div>
+          </div>
+        </div>`;
+    });
+    recentSection.innerHTML = html;
+  }
+
+  function createInvoiceDiv(rec){
+    // إنشاء DIV يظهر بيانات الفاتورة
+    invoiceCanvas.innerHTML = '';
+    const div = document.createElement('div');
+    div.style.padding = '12px';
+    div.style.color = '#eee';
+    div.style.fontSize = '14px';
+    div.style.width = '300px';
+    div.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    div.style.background = '#222831';
+    div.style.borderRadius = '12px';
+    div.style.textAlign = 'right';
+    div.innerHTML = `
+      <h2 style="margin:0 0 10px 0; text-align:center; color:#ff8a00;">فاتورة توصيل</h2>
+      <div><strong>السائق:</strong> ${rec.driver}</div>
+      <div><strong>الزبون:</strong> ${rec.customer}</div>
+      <div><strong>الوجهة:</strong> ${rec.destination}</div>
+      <div><strong>المبلغ:</strong> ${rec.amount.toFixed(2)} ليرة</div>
+      <div><strong>التاريخ:</strong> ${new Date(rec.datetime).toLocaleString('ar-EG-u-nu-latn')}</div>
+      <div style="margin-top: 10px; text-align:center; font-size: 12px; color:#aaa;">شكراً لاستخدامكم نظام التوصيل</div>
+    `;
+    invoiceCanvas.appendChild(div);
+    invoiceCanvas.style.display = 'block';
+  }
+
+  function saveInvoicePNG(){
+    // استخدام html2canvas لتحويل div إلى صورة وحفظها
+    return html2canvas(invoiceCanvas, {backgroundColor: null}).then(canvas=>{
+      const link = document.createElement('a');
+      link.download = `فاتورة_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      invoiceCanvas.style.display = 'none';
+    });
+  }
+
+  function onSave(){
+    playClickSound();
+    const driver = driverName.value.trim();
+    let customer = customerName.value.trim();
+    let dest = destination.value;
+    const other = otherPlace.value.trim();
+    const amt = parseFloat(amount.value);
+    const dtIso = new Date().toISOString();
+
+    if(!driver){ alert('ادخل اسم السائق'); return; }
+    if(!customer){ alert('ادخل اسم الزبون'); return; }
+    if(dest === 'أخرى'){
+      if(!other){ alert('اكتب اسم المكان عند اختيار "أخرى"'); return; }
+      dest = other;
+    }
+    if(isNaN(amt) || amt <= 0){ alert('ادخل مبلغ صالح'); return; }
+
+    const record = {id:Date.now(), driver, customer, destination: dest, amount: amt, datetime: dtIso};
+    const recs = getRecords();
+    recs.unshift(record);
+    saveRecords(recs);
+
+    // حفظ الزبائن في قائمة
+    const customers = getCustomers();
+    if(!customers.includes(customer)){
+      customers.unshift(customer);
+      saveCustomers(customers.slice(0, 200));
+    }
+    refreshCustomersDatalist();
+    renderRecent();
+    buildStats();
+
+    // حفظ اسم السائق في التخزين المحلي
+    localStorage.setItem('last_driver_name', driver);
+
+    // إعداد حقل التاريخ والوقت للعرض
+    datetime.value = new Date().toLocaleString('ar-EG-u-nu-latn');
+
+    // عرض وحفظ صورة الفاتورة png
+    createInvoiceDiv(record);
+    saveInvoicePNG();
+
+    // مسح الحقول باستثناء السائق والزبون
+    amount.value = '';
+    if(dest === other) otherPlace.value = '';
+    if(destination.value === 'أخرى') destination.value = '';
+
+    // مؤثر صوتي عند الحفظ
+    playClickSound();
+  }
+
+  function onClear(){
+    playClickSound();
+    if(confirm('هل تريد تفريغ جميع البيانات؟')){
+      localStorage.removeItem(KEY_RECORDS);
+      localStorage.removeItem(KEY_CUSTOMERS);
+      renderRecent();
+      buildStats();
+      refreshCustomersDatalist();
+    }
+  }
+
+  function buildStats(){
+    const recs = getRecords();
+    let totalTrips = recs.length;
+    let totalAmount = 0;
+    const byCust = {};
+    recs.forEach(r=>{
+      totalAmount += r.amount;
+      if(!byCust[r.customer]) byCust[r.customer] = {trips:0, amount:0};
+      byCust[r.customer].trips++;
+      byCust[r.customer].amount += r.amount;
+    });
+
+    let totalTax = 0;
+    let custHtml = '';
+    for(const cust in byCust){
+      const data = byCust[cust];
+      const taxCount = Math.floor(data.trips / 5);
+      const tax = taxCount * TAX_PER_5;
+      totalTax += tax;
+      custHtml += `<div class="entry">
+        <div><strong>${cust}</strong><br><small class="muted">${data.trips} طلعات — ${data.amount.toFixed(2)} ليرة</small></div>
+        <div style="text-align:left"><small class="muted">ضريبة: <strong>${tax}</strong> ليرة</small></div>
+      </div>`;
+    }
+    if(!custHtml) custHtml = '<div class="muted small">لا يوجد زبائن مسجلين بعد</div>';
+
+    totalTripsEl.textContent = totalTrips;
+    totalAmountEl.textContent = totalAmount.toFixed(2);
+    totalTaxEl.textContent = totalTax.toFixed(2);
+    customersStats.innerHTML = custHtml;
+
+    // بناء جدول الطلعات مع تعديل وحذف
+    tripsTableBody.innerHTML = '';
+    recs.forEach(r=>{
+      const tr = document.createElement('tr');
+
+      const dtCell = document.createElement('td');
+      dtCell.textContent = new Date(r.datetime).toLocaleString('ar-EG-u-nu-latn');
+      dtCell.dataset.id = r.id;
+      dtCell.className = 'editable-cell';
+      dtCell.dataset.field = 'datetime';
+
+      const custCell = document.createElement('td');
+      custCell.textContent = r.customer;
+      custCell.className = 'editable-cell';
+      custCell.dataset.id = r.id;
+      custCell.dataset.field = 'customer';
+
+      const destCell = document.createElement('td');
+      destCell.textContent = r.destination;
+      destCell.className = 'editable-cell';
+      destCell.dataset.id = r.id;
+      destCell.dataset.field = 'destination';
+
+      const amtCell = document.createElement('td');
+      amtCell.textContent = r.amount.toFixed(2) + ' ليرة';
+      amtCell.className = 'editable-cell';
+      amtCell.dataset.id = r.id;
+      amtCell.dataset.field = 'amount';
+
+      const driverCell = document.createElement('td');
+      driverCell.textContent = r.driver;
+      driverCell.style.textAlign = 'center';
+
+      const timeCell = document.createElement('td');
+      // نعرض فقط الوقت (ساعة:دقيقة:ثانية) بالأرقام الأجنبية
+      timeCell.textContent = new Date(r.datetime).toLocaleTimeString('en-US', {hour12:false});
+      timeCell.style.textAlign = 'center';
+
+      const actionsCell = document.createElement('td');
+      actionsCell.style.textAlign = 'center';
+
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'تعديل';
+      editBtn.className = 'link-like';
+      editBtn.style.minWidth = '60px';
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'حذف';
+      delBtn.className = 'link-like btn-danger';
+      delBtn.style.minWidth = '60px';
+
+      actionsCell.appendChild(editBtn);
+      actionsCell.appendChild(delBtn);
+
+      tr.appendChild(dtCell);
+      tr.appendChild(custCell);
+      tr.appendChild(destCell);
+      tr.appendChild(amtCell);
+      tr.appendChild(driverCell);
+      tr.appendChild(timeCell);
+      tr.appendChild(actionsCell);
+
+      tripsTableBody.appendChild(tr);
+
+      let editing = false;
+      editBtn.addEventListener('click', ()=>{
+        if(!editing){
+          [dtCell,custCell,destCell,amtCell].forEach(cell=>{
+            const val = cell.textContent.replace(' ليرة','').trim();
+            const input = document.createElement('input');
+            input.type = (cell.dataset.field==='amount') ? 'number' : 'text';
+            if(cell.dataset.field === 'amount') input.step = "0.01";
+            input.className = 'edit-input';
+            input.value = val;
+            cell.textContent = '';
+            cell.appendChild(input);
+          });
+          editBtn.textContent = 'حفظ';
+          editing = true;
+        } else {
+          const inputs = [dtCell,custCell,destCell,amtCell].map(c=>c.querySelector('input'));
+          if(!inputs[1].value.trim()){ alert('اسم الزبون مطلوب'); return; }
+          if(!inputs[2].value.trim()){ alert('الوجهة مطلوبة'); return; }
+          const amtVal = parseFloat(inputs[3].value);
+          if(isNaN(amtVal) || amtVal<=0){ alert('المبلغ غير صالح'); return; }
+
+          // تحديث السجل
+          const records = getRecords();
+          const idx = records.findIndex(x=>x.id == dtCell.dataset.id);
+          if(idx < 0){ alert('السجل غير موجود'); return; }
+
+          // تحويل التاريخ
+          let newDateIso;
+          try {
+            const dtInput = new Date(inputs[0].value);
+            if(isNaN(dtInput)) throw 'تاريخ غير صالح';
+            newDateIso = dtInput.toISOString();
+          } catch(e) {
+            alert('تاريخ غير صالح');
+            return;
+          }
+
+          records[idx].datetime = newDateIso;
+          records[idx].customer = inputs[1].value.trim();
+          records[idx].destination = inputs[2].value.trim();
+          records[idx].amount = amtVal;
+          saveRecords(records);
+
+          // تحديث العملاء
+          const customers = getCustomers();
+          if(!customers.includes(records[idx].customer)){
+            customers.unshift(records[idx].customer);
+            saveCustomers(customers.slice(0,200));
+          }
+          refreshCustomersDatalist();
+
+          buildStats();
+
+          editing = false;
+          editBtn.textContent = 'تعديل';
+        }
+      });
+
+      delBtn.addEventListener('click', ()=>{
+        playClickSound();
+        if(confirm('هل تريد حذف هذا السجل؟')){
+          const records = getRecords();
+          const idx = records.findIndex(x=>x.id == dtCell.dataset.id);
+          if(idx >= 0){
+            records.splice(idx, 1);
+            saveRecords(records);
+            buildStats();
+            renderRecent();
+          }
+        }
+      });
+    });
+  }
+
+  // تصدير بيانات JSON
+  function onExportData(){
+    playClickSound();
+    const records = getRecords();
+    const customers = getCustomers();
+    const data = {records, customers};
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'delivery_data.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // استيراد بيانات JSON
+  function onImportData(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event){
+      try{
+        const data = JSON.parse(event.target.result);
+        if(!data.records || !data.customers) throw 'تنسيق غير صحيح';
+
+        const currentRecords = getRecords();
+        const currentIds = new Set(currentRecords.map(r=>r.id));
+        data.records.forEach(r=>{
+          if(!currentIds.has(r.id)) currentRecords.push(r);
+        });
+        saveRecords(currentRecords);
+
+        const currentCustomers = getCustomers();
+        data.customers.forEach(c=>{
+          if(!currentCustomers.includes(c)) currentCustomers.push(c);
+        });
+        saveCustomers(currentCustomers);
+
+        refreshCustomersDatalist();
+        renderRecent();
+        alert('تم استيراد البيانات ومزامنتها');
+      }catch(err){
+        alert('خطأ في قراءة الملف: ' + err);
+      }
+      importFileInput.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  // فتح صفحة الإحصائيات
+  function openStatsView(){
+    playClickSound();
+    statsPage.classList.remove('hidden');
+    mainForm.classList.add('hidden');
+  }
+
+  // إغلاق صفحة الإحصائيات
+  function closeStatsView(){
+    playClickSound();
+    statsPage.classList.add('hidden');
+    mainForm.classList.remove('hidden');
+  }
+
+  // تهيئة التطبيق
+  function init(){
+    populateDestinations();
+    refreshCustomersDatalist();
+    renderRecent();
+    setNowDatetime();
+
+    const lastDriver = localStorage.getItem('last_driver_name') || '';
+    driverName.value = lastDriver;
+
+    destination.addEventListener('change', ()=>{
+      playClickSound();
+      onDestinationChange();
+    });
+    saveBtn.addEventListener('click', onSave);
+    clearBtn.addEventListener('click', onClear);
+    openStats.addEventListener('click', openStatsView);
+    backBtn.addEventListener('click', closeStatsView);
+    printStats.addEventListener('click', ()=>{
+      playClickSound();
+      window.print();
+    });
+    exportDataBtn.addEventListener('click', onExportData);
+    importDataBtn.addEventListener('click', ()=>{
+      playClickSound();
+      importFileInput.click();
+    });
+    importFileInput.addEventListener('change', onImportData);
+  }
+
+  init();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("Service Worker مسجل بنجاح"))
+    .catch((err) => console.log("فشل تسجيل Service Worker", err));
+}
+</script>
+
+</body>
+</html>
