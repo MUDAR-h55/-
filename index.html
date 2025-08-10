@@ -757,5 +757,48 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 
+
+<!-- زر تثبيت التطبيق -->
+<button id="installBtn" style="
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#ff8a00;
+  color:#041028;
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  z-index:1000;
+">📲 تثبيت التطبيق</button>
+
+<script>
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+installBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('تم تثبيت التطبيق ✅');
+    } else {
+      console.log('تم إلغاء التثبيت ❌');
+    }
+    deferredPrompt = null;
+  } else {
+    alert("يمكنك التثبيت من إعدادات المتصفح إذا كان مدعومًا.");
+  }
+});
+</script>
+
 </body>
 </html>
