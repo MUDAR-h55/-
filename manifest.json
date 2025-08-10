@@ -1,7 +1,8 @@
 {
   "name": "نظام تسعيرة التوصيل",
   "short_name": "تسعيرة التوصيل",
-  "start_url": "index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f1724",
   "theme_color": "#ff8a00",
